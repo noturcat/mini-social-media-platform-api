@@ -2,9 +2,13 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+use App\Models\User;
+use App\Models\Person;
+use App\Models\Post;
+use App\Models\Blog;
+use App\Models\Event;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\PersonController;
 use App\Http\Controllers\BlogController;
@@ -17,29 +21,36 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Step 1: Create Users
-        $users = \App\Models\User::factory(5)->create();
+        // 🧹 Optional: Reset tables to avoid duplicate key errors
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        Person::truncate();
+        Post::truncate();
+        Blog::truncate();
+        Event::truncate();
+        User::truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
-        // Step 2: Create Persons with matching user_id
+        // ✅ Step 1: Create Users
+        $users = User::factory(5)->create();
+
+        // ✅ Step 2: Create matching Persons
         foreach ($users as $user) {
-            \App\Models\Person::factory()->create([
+            Person::factory()->create([
                 'user_id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
             ]);
         }
 
-        // Continue with other seeds (optional)
-        \App\Models\Post::factory(20)->create();
-        \App\Models\Blog::factory(10)->create();
-        \App\Models\Event::factory(10)->create();
+        // ✅ Step 3: Other factories
+        Post::factory(20)->create();
+        Blog::factory(10)->create();
+        Event::factory(10)->create();
 
-        // Sync to Typesense
-        (new \App\Http\Controllers\PostController)->syncToTypesense();
-        (new \App\Http\Controllers\PersonController)->syncToTypesense();
-        (new \App\Http\Controllers\BlogController)->syncToTypesense();
-        (new \App\Http\Controllers\EventController)->syncToTypesense();
+        // ✅ Step 4: Sync all to Typesense
+        (new PostController)->syncToTypesense();
+        (new PersonController)->syncToTypesense();
+        (new BlogController)->syncToTypesense();
+        (new EventController)->syncToTypesense();
     }
-
-
 }
