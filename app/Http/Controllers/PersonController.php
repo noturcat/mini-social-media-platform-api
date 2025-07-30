@@ -29,6 +29,7 @@ class PersonController extends Controller
                 'name' => $person->name,
                 'email' => $person->email,
                 'bio' => $person->bio,
+                'created_at' => strtotime($person->created_at),
             ];
 
             app('typesense')->upsertDocument('people', $document);   
@@ -61,8 +62,9 @@ class PersonController extends Controller
                 'name' => $person->name,
                 'email' => $person->email,
                 'bio' => $person->bio,
+                'created_at' => strtotime($person->created_at),
             ];
-            
+
             app('typesense')->upsertDocument('people', $document);  
         } catch (\Exception $e) {
             Log::error("❌ Typesense update failed for person ID {$person->id}: " . $e->getMessage());
@@ -77,7 +79,7 @@ class PersonController extends Controller
         $person->delete();
 
         try {
-            app('typesense')->deleteDocument('people', (string) $person->id); 
+            app('typesense')->deleteDocument('people', (string) $personId); 
         } catch (\Exception $e) {
             Log::error("❌ Typesense delete failed for person ID {$personId}: " . $e->getMessage());
         }
@@ -87,21 +89,32 @@ class PersonController extends Controller
 
     public function syncToTypesense()
     {
-        $people = Person::all();
+        try {
+            $people = Person::all();
 
-        foreach ($people as $person) {
-            try {
-                app('typesense')->collections['people']->documents->upsert([
+            $documents = $people->map(function ($person) {
+                return [
                     'id' => (string) $person->id,
                     'name' => $person->name,
                     'email' => $person->email,
                     'bio' => $person->bio,
-                ]);
-            } catch (\Exception $e) {
-                Log::error("❌ Typesense sync failed for person ID {$person->id}: " . $e->getMessage());
-            }
-        }
+                    'created_at' => strtotime($person->created_at),
+                ];
+            })->toArray();
 
-        return response()->json(['message' => '✅ People synced to Typesense']);
+            $result = app('typesense')
+                ->getClient()
+                ->collections['people']
+                ->documents
+                ->import($documents, ['action' => 'upsert']);
+
+            return response()->json([
+                'message' => '✅ People synced to Typesense',
+                'result' => $result
+            ]);
+        } catch (\Exception $e) {
+            Log::error("❌ Typesense sync failed: " . $e->getMessage());
+            return response()->json(['error' => 'Typesense sync failed'], 500);
+        }
     }
 }

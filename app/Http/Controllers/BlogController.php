@@ -4,13 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Blog;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log; // ✅ Import Log facade
+use Illuminate\Support\Facades\Log;
 
 class BlogController extends Controller
 {
     public function index()
     {
-        return Blog::with('person')->get();
+        return Blog::with('person')->latest('created_at')->get();
     }
 
     public function store(Request $request)
@@ -36,9 +36,10 @@ class BlogController extends Controller
                 'image_url' => $blog->image_url,
                 'tags' => json_decode($blog->tags, true),
                 'person_id' => (int) $blog->person_id,
+                'created_at' => strtotime($blog->created_at),
             ];
 
-            app('typesense')->upsertDocument('blogs', $document); 
+            app('typesense')->upsertDocument('blogs', $document);
         } catch (\Exception $e) {
             Log::error('Typesense blog store failed: ' . $e->getMessage());
         }
@@ -75,8 +76,9 @@ class BlogController extends Controller
                 'summary' => $blog->summary,
                 'body' => $blog->body,
                 'image_url' => $blog->image_url,
-                'tags' => is_string($blog->tags) ? json_decode($blog->tags, true) : $blog->tags,
+                'tags' => is_string($blog->tags) ? json_decode($blog->tags, true) : ($blog->tags ?? []),
                 'person_id' => (int) $blog->person_id,
+                'created_at' => strtotime($blog->created_at),
             ];
 
             app('typesense')->upsertDocument('blogs', $document);
@@ -102,22 +104,35 @@ class BlogController extends Controller
 
     public function syncToTypesense()
     {
-        $blogs = Blog::all();
+        try {
+            $blogs = Blog::all();
 
-        foreach ($blogs as $blog) {
-            try {
-                app('typesense')->collections['blogs']->documents->upsert([
+            $documents = $blogs->map(function ($blog) {
+                return [
                     'id' => (string) $blog->id,
                     'title' => $blog->title,
                     'summary' => $blog->summary,
                     'body' => $blog->body,
+                    'image_url' => $blog->image_url,
+                    'tags' => is_string($blog->tags) ? json_decode($blog->tags, true) : ($blog->tags ?? []),
                     'person_id' => (int) $blog->person_id,
-                ]);
-            } catch (\Exception $e) {
-                Log::error("Typesense sync failed for blog ID {$blog->id}: " . $e->getMessage());
-            }
-        }
+                    'created_at' => strtotime($blog->created_at),
+                ];
+            })->toArray();
 
-        return response()->json(['message' => '✅ Blogs synced to Typesense']);
+            $result = app('typesense')
+                ->getClient()
+                ->collections['blogs']
+                ->documents
+                ->import($documents, ['action' => 'upsert']);
+
+            return response()->json([
+                'message' => '✅ Blogs synced to Typesense',
+                'result' => $result
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Typesense blog sync failed: ' . $e->getMessage());
+            return response()->json(['error' => 'Typesense sync failed'], 500);
+        }
     }
 }

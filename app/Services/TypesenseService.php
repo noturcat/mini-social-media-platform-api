@@ -21,6 +21,11 @@ class TypesenseService
         ]);
     }
 
+    public function getClient()
+    {
+        return $this->client;
+    }
+
     public function createOrUpdateSchema($schema)
     {
         try {

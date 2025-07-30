@@ -18,12 +18,10 @@ class PersonFactory extends Factory
      */
     public function definition(): array
     {
-        return [
-            'user_id' => User::factory(),
+        return [ 
             'name' => $this->faker->name,
             'email' => $this->faker->unique()->safeEmail,
             'bio' => $this->faker->paragraph,
         ];
-    }
-
+    } 
 }

@@ -4,13 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Event;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log; // ✅ Import Log
+use Illuminate\Support\Facades\Log;
 
 class EventController extends Controller
 {
     public function index()
     {
-        return Event::with('person')->get();
+        return Event::with('person')->latest('created_at')->get();
     }
 
     public function store(Request $request)
@@ -31,9 +31,10 @@ class EventController extends Controller
                 'location' => $event->location,
                 'time' => $event->time,
                 'person_id' => (int) $event->person_id,
+                'created_at' => strtotime($event->created_at),
             ];
 
-            app('typesense')->upsertDocument('events', $document); 
+            app('typesense')->upsertDocument('events', $document);
         } catch (\Exception $e) {
             Log::error('Typesense event store failed: ' . $e->getMessage());
         }
@@ -64,9 +65,10 @@ class EventController extends Controller
                 'location' => $event->location,
                 'time' => $event->time,
                 'person_id' => (int) $event->person_id,
+                'created_at' => strtotime($event->created_at),
             ];
 
-            app('typesense')->upsertDocument('events', $document); 
+            app('typesense')->upsertDocument('events', $document);
         } catch (\Exception $e) {
             Log::error('Typesense event update failed: ' . $e->getMessage());
         }
@@ -79,7 +81,7 @@ class EventController extends Controller
         $event->delete();
 
         try {
-            app('typesense')->deleteDocument('events', (string) $event->id); 
+            app('typesense')->deleteDocument('events', (string) $event->id);
         } catch (\Exception $e) {
             Log::error('Typesense event delete failed: ' . $e->getMessage());
         }
@@ -89,23 +91,33 @@ class EventController extends Controller
 
     public function syncToTypesense()
     {
-        $events = Event::all();
+        try {
+            $events = Event::all();
 
-        foreach ($events as $event) {
-            try {
-                app('typesense')->collections['events']->documents->upsert([
+            $documents = $events->map(function ($event) {
+                return [
                     'id' => (string) $event->id,
                     'title' => $event->title,
-                    'description' => $event->description ?? '',
                     'location' => $event->location,
-                    'start_time' => optional($event->start_time)->toDateTimeString(),
-                    'end_time' => optional($event->end_time)->toDateTimeString(),
-                ]);
-            } catch (\Exception $e) {
-                Log::error("Typesense sync failed for event ID {$event->id}: " . $e->getMessage());
-            }
-        }
+                    'time' => $event->time,
+                    'person_id' => (int) $event->person_id,
+                    'created_at' => strtotime($event->created_at),
+                ];
+            })->toArray();
 
-        return response()->json(['message' => '✅ Events synced to Typesense']);
+            $result = app('typesense')
+                ->getClient()
+                ->collections['events']
+                ->documents
+                ->import($documents, ['action' => 'upsert']);
+
+            return response()->json([
+                'message' => '✅ Events synced to Typesense',
+                'result' => $result
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Typesense event sync failed: ' . $e->getMessage());
+            return response()->json(['error' => 'Typesense sync failed'], 500);
+        }
     }
 }
