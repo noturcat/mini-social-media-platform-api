@@ -18,26 +18,27 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // Step 1: Create Users
-        $users = User::factory(10)->create();
+        $users = \App\Models\User::factory(10)->create();
 
-        // Step 2: Create Persons with matching user_id and email
+        // Step 2: Create Persons with matching user_id
         foreach ($users as $user) {
-            Person::factory()->create([
+            \App\Models\Person::factory()->create([
                 'user_id' => $user->id,
-                'name'    => $user->name,
-                'email'   => $user->email,
+                'name' => $user->name,
+                'email' => $user->email,
             ]);
         }
 
-        // Step 3: Create other resources
-        Post::factory(20)->create();
-        Blog::factory(10)->create();
-        Event::factory(10)->create();
+        // Continue with other seeds (optional)
+        \App\Models\Post::factory(20)->create();
+        \App\Models\Blog::factory(10)->create();
+        \App\Models\Event::factory(10)->create();
 
-        // Step 4: Sync to Typesense
-        (new PostController)->syncToTypesense();
-        (new PersonController)->syncToTypesense();
-        (new BlogController)->syncToTypesense();
-        (new EventController)->syncToTypesense();
+        // Sync to Typesense
+        (new \App\Http\Controllers\PostController)->syncToTypesense();
+        (new \App\Http\Controllers\PersonController)->syncToTypesense();
+        (new \App\Http\Controllers\BlogController)->syncToTypesense();
+        (new \App\Http\Controllers\EventController)->syncToTypesense();
     }
+
 }
