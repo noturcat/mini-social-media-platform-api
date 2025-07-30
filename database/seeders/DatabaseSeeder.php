@@ -18,7 +18,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // Step 1: Create Users
-        $users = \App\Models\User::factory(10)->create();
+        $users = \App\Models\User::factory(5)->create();
 
         // Step 2: Create Persons with matching user_id
         foreach ($users as $user) {
