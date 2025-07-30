@@ -38,7 +38,7 @@ class BlogController extends Controller
                 'person_id' => (int) $blog->person_id,
             ];
 
-            app('typesense')->collections['blogs']->documents->upsert($document);
+            app('typesense')->upsertDocument('blogs', $document); 
         } catch (\Exception $e) {
             Log::error('Typesense blog store failed: ' . $e->getMessage());
         }
@@ -79,7 +79,7 @@ class BlogController extends Controller
                 'person_id' => (int) $blog->person_id,
             ];
 
-            app('typesense')->collections['blogs']->documents->upsert($document);
+            app('typesense')->upsertDocument('blogs', $document);
         } catch (\Exception $e) {
             Log::error('Typesense blog update failed: ' . $e->getMessage());
         }
@@ -92,9 +92,7 @@ class BlogController extends Controller
         $blog->delete();
 
         try {
-            app('typesense')->collections['blogs']
-                ->documents[(string) $blog->id]
-                ->delete();
+            app('typesense')->deleteDocument('blogs', (string) $blog->id);
         } catch (\Exception $e) {
             Log::error('Typesense blog delete failed: ' . $e->getMessage());
         }

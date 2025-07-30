@@ -31,9 +31,8 @@ class PersonController extends Controller
                 'bio' => $person->bio,
             ];
 
-            app('typesense')->collections['people']
-                ->documents
-                ->upsert($document);
+            app('typesense')->upsertDocument('people', $document);   
+
         } catch (\Exception $e) {
             Log::error("❌ Typesense indexing failed for person ID {$person->id}: " . $e->getMessage());
         }
@@ -63,10 +62,8 @@ class PersonController extends Controller
                 'email' => $person->email,
                 'bio' => $person->bio,
             ];
-
-            app('typesense')->collections['people']
-                ->documents
-                ->upsert($document);
+            
+            app('typesense')->upsertDocument('people', $document);  
         } catch (\Exception $e) {
             Log::error("❌ Typesense update failed for person ID {$person->id}: " . $e->getMessage());
         }
@@ -80,9 +77,7 @@ class PersonController extends Controller
         $person->delete();
 
         try {
-            app('typesense')->collections['people']
-                ->documents[(string) $personId]
-                ->delete();
+            app('typesense')->deleteDocument('people', (string) $person->id); 
         } catch (\Exception $e) {
             Log::error("❌ Typesense delete failed for person ID {$personId}: " . $e->getMessage());
         }

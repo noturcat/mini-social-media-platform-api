@@ -33,7 +33,7 @@ class EventController extends Controller
                 'person_id' => (int) $event->person_id,
             ];
 
-            app('typesense')->collections['events']->documents->upsert($document);
+            app('typesense')->upsertDocument('events', $document); 
         } catch (\Exception $e) {
             Log::error('Typesense event store failed: ' . $e->getMessage());
         }
@@ -66,7 +66,7 @@ class EventController extends Controller
                 'person_id' => (int) $event->person_id,
             ];
 
-            app('typesense')->collections['events']->documents->upsert($document);
+            app('typesense')->upsertDocument('events', $document); 
         } catch (\Exception $e) {
             Log::error('Typesense event update failed: ' . $e->getMessage());
         }
@@ -79,7 +79,7 @@ class EventController extends Controller
         $event->delete();
 
         try {
-            app('typesense')->collections['events']->documents[(string) $event->id]->delete();
+            app('typesense')->deleteDocument('events', (string) $event->id); 
         } catch (\Exception $e) {
             Log::error('Typesense event delete failed: ' . $e->getMessage());
         }

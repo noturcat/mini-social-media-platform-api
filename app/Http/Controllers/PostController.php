@@ -35,7 +35,7 @@ class PostController extends Controller
                 'person_id' => (int) $post->person_id,
             ];
 
-            app('typesense')->collections['posts']->documents->upsert($document);
+            app('typesense')->upsertDocument('posts', $document); 
         } catch (\Exception $e) {
             Log::error('Typesense post store failed: ' . $e->getMessage());
         }
@@ -73,8 +73,7 @@ class PostController extends Controller
                 'tags' => is_string($post->tags) ? json_decode($post->tags, true) : $post->tags,
                 'person_id' => (int) $post->person_id,
             ];
-
-            app('typesense')->collections['posts']->documents->upsert($document);
+            app('typesense')->upsertDocument('posts', $document); 
         } catch (\Exception $e) {
             Log::error('Typesense post update failed: ' . $e->getMessage());
         }
@@ -87,7 +86,7 @@ class PostController extends Controller
         $post->delete();
 
         try {
-            app('typesense')->collections['posts']->documents[(string) $post->id]->delete();
+            app('typesense')->deleteDocument('people', (string) $post->id);
         } catch (\Exception $e) {
             Log::error('Typesense post delete failed: ' . $e->getMessage());
         }
